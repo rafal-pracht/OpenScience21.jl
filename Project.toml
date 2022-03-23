@@ -1,0 +1,4 @@
+name = "OpenScience21"
+uuid = "1f64433d-a5b1-4eb0-82b9-8e6199a4cfad"
+authors = ["Rafał Pracht <rpracht@wp.pl>"]
+version = "0.1.0"
