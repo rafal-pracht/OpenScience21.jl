@@ -1,5 +1,5 @@
 module OpenScience21
 
-greet() = print("Hello World!")
+include("Simulation/Simulation.jl")
 
 end # module
