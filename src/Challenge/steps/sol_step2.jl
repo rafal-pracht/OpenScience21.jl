@@ -1,0 +1,216 @@
+include("../init.jl")
+
+state_end_expected = ket"110"
+state_start_sym = ket"110"
+
+t = π
+trotter_steps = 10
+qc_full, params, params2, params3 = generate_circuit(trotter_steps, trotter_steps, t, init=true)
+addMeasuresOS(qc_full)
+# Execute simulation
+check_simulation_err(qc_full, t)
+#execute(backend, qc_full)
+
+###############################
+
+# Iterative algoritms
+st = 2
+check_qc, _, _, _ = generate_circuit(trotter_steps, 6, t, params, params2, params3, init=false)
+trotter_step_qc_exp, _, _, _ = generate_circuit(trotter_steps, st, t, params, params2, params3, init=false)
+#### Step 1 - circuit ###############################
+step1_params = [6.490463894513841, 3.434943430067894, 5.375354561541277, 4.7906997798464115, 2.849325024133124, 2.7673620360366824, 1.4940499436354768, 4.487752591524359, 3.2948988322626382, 2.0225225509500486, -1.2343170007923738, 1.0431091490261049, 1.8837296276360387, 1.2169677999557502, 5.940807695305212, 5.421210358780618, 0.3173688878579456, -6.965567540712155, 4.835967484868803, 3.0127993733543517, 4.4620544822135475, 1.378337396849606, 1.980959799643362, 3.6789144092845376, 5.417860886313657, 1.8687391611628605, 5.092938820960128]
+step1_ansact = generate_ansact()
+setparameters!(step1_ansact, step1_params)
+step1_inv_ansact = inv(step1_ansact)
+bindparameters!(step1_inv_ansact)
+#### expected circiut ###############################
+step_qc_exp = generate_empty_circuit()
+append!(step_qc_exp, step1_inv_ansact)
+append!(step_qc_exp, trotter_step_qc_exp)
+#addMeasuresOS(step_qc_exp)
+
+@assert length(getparameters(step_qc_exp)) == 0
+err_state(tomatrix(check_qc) * tomatrix(step_qc_exp) * ket"0000000", ket"0101000")
+err_state(tomatrix(check_qc) * tomatrix(step_qc_exp) * ket"0000000", tomatrix(qc_full) * ket"0000000")
+
+
+tmp_qc_full = generate_empty_circuit()
+append!(tmp_qc_full, step_qc_exp)
+append!(tmp_qc_full, check_qc)
+addMeasuresOS(tmp_qc_full)
+execute(backend, tmp_qc_full)
+
+
+###############################
+
+function getCheckValue(params)
+    ansact = generate_ansact()
+    setparameters!(ansact, params)
+    inv_ansact = inv(ansact)
+
+    check_step_qc_full = generate_empty_circuit()
+    append!(check_step_qc_full, inv_ansact)
+    append!(check_step_qc_full, check_qc)
+    # Add measures
+    addMeasuresOS(check_step_qc_full)
+    check_simulation_err(check_step_qc_full, t)
+end
+
+function check_unitary_error(params)
+    qc_tmp1 = generate_empty_circuit()
+    append!(qc_tmp1, step_qc_exp)
+    addMeasuresOS(qc_tmp1)
+    tmp1_sv = qc_tmp1.measures_matrix * tomatrix(qc_tmp1) * ket"0000000"
+
+    qc_tmp2 = generate_ansact()
+    setparameters!(qc_tmp2, params)
+    qc_tmp2 = inv(qc_tmp2)
+    tmp2_sv = qc_tmp1.measures_matrix * tomatrix(qc_tmp2) * ket"0000000"
+
+    return min_observe_unitary_error(tmp1_sv, tmp2_sv)
+end
+
+###############################
+# start_params = [6.593688313007467, 3.9664738868430183, 5.38273515121565, -5.1071267301371135, 5.312816091916662, -0.9593734329970084, -0.6332256065037024, 4.912690845809515, -1.6075324706920202, -0.3822788251312607, 2.9481668979265327, 1.4093472266503706, 3.5907528743919808, 6.361842411167646, -1.1524361006463084, 3.1139080018756955, 6.153090153050713, 0.7674635768805033, 0.5181696900280155, 1.0389071820355782, 1.8269338923477096, 1.504954987235849, 5.318322932725127, 0.35971848771896436, 3.3698085003465406, 0.7409220865300142, 3.8563844322818257]
+# start_params = [6.3283457525550135, 4.167134809510337, 4.620926859815508, -4.841842541166644, 5.896186084901079, -1.019451225895334, -0.6391964819257442, 4.730856744735936, -1.7161819148459123, -6.887269248705733, 2.9447544172490927, 2.0885805129974693, -2.546707225956118, 6.327090511327009, -0.8856231994849837, 3.042241465945323, 6.231329807774402, 0.8514314738043587, 0.43849496405840876, 0.9742802240881691, 2.005788317093887, 1.3713502403577256, 5.242035331923336, 0.3208221391497766, 3.3519638793079864, 0.5866858618898607, 3.9021475136766566]
+# start_params = [6.338648099804903, 4.138475380853868, 4.584592811926486, -4.820532741455703, 6.169751136717532, -1.2133394734974365, -0.7155462590881418, 4.736543857601896, -1.7772623874852254, -6.927071813040913, 2.3645160727826013, 2.101694458088449, -2.540910736238104, 6.325263317463025, -0.8039003107002047, 3.0389022910991343, 6.236753208186921, 0.8451949152138578, 0.4156142368763096, 0.9212144693373794, 2.011446556648412, 1.3794270486013782, 5.042026080459072, 0.35592074520821937, 3.3605131498432748, 0.5833104029164671, 3.9035118953007464]
+# start_params = [6.358086264923476, 4.140412750414626, 4.576622339455392, -4.804190219459197, 6.179647582184863, -1.2583432812514943, -0.7274420808524272, 4.718259323770968, -1.8067295140572064, -6.927069820952146, 2.363301514603709, 2.0648165784026085, -2.518721031981265, 6.3253312303344265, -0.8003378313080225, 3.0198378594521937, 6.236864231907737, 0.7784536383466504, 0.38684731630752417, 0.9212620004724034, 2.0150480392741534, 1.3801138113662903, 5.041931949419871, 0.36338055698820565, 3.370771185375224, 0.9766489974382948, 3.8998350472312966]
+# start_params = [6.36073049589668, 4.138058290133819, 4.576025186142422, -4.789380541021033, 6.185769259259744, -1.2872204935684988, -0.7637937664009494, 4.683742722340903, -1.809627804903635, -6.937057128012416, 2.3523279950006946, 2.0280418299650607, -2.5141030491652137, 6.325383269961514, -0.7898136723488696, 3.0067830045691153, 6.236838961056694, 0.7782478382523803, 0.3866668728004986, 0.9212703266844496, 2.0195612780936507, 1.3804568030581197, 5.042507442332636, 0.3818688455578382, 3.3943788295918083, 0.9766859929688624, 3.890672336546919]
+# start_params = [6.360688923143747, 4.138052869778313, 4.5760233993452655, -4.794395546976677, 6.201472742805961, -1.3409788022546785, -0.7639679939837951, 4.68370662160691, -1.8305819234876752, -6.944877287705348, 2.3522375021929016, 2.02803618845009, -2.4954434018796405, 6.32543688999292, -0.7898181365925973, 3.006055152756701, 6.236838734892815, 0.7776983513265997, 0.36841414521043403, 0.921377259383015, 2.0325664263027896, 1.3817782282483932, 5.042498915882738, 0.3843747619221955, 3.405226878818178, 0.9766808850171335, 3.874244485348284]
+start_params =[6.357739083193767, 4.110466988994183, 4.566133708100635, -4.727581603064405, 6.207391247986331, -1.3477711816915519, -0.7698439582879397, 4.677177128084215, -1.88364164245155, -6.961405873009646, 2.3088656324648755, 1.9854073372986245, -2.4954433452385736, 6.326779366664302, -0.7789648567030898, 2.995616831369772, 6.237335880828537, 0.6943207146536418, 0.37027914593259564, 0.9373275950100715, 2.0325673904575456, 1.3926281522358193, 5.042496816647515, 0.3933698184667445, 3.4025273194720507, 0.9766806621264883, 3.8089690519454855]
+############################### Real machine ###############################
+# start_params = [6.593688313007467, 3.9664738868430183, 5.38273515121565, -5.1071267301371135, 5.312816091916662, -0.9593734329970084, -0.6332256065037024, 4.912690845809515, -1.6075324706920202, -0.3822788251312607, 2.9481668979265327, 1.4093472266503706, 3.5907528743919808, 6.361842411167646, -1.1524361006463084, 3.1139080018756955, 6.153090153050713, 0.7674635768805033, 0.5181696900280155, 1.0389071820355782, 1.8269338923477096, 1.504954987235849, 5.318322932725127, 0.35971848771896436, 3.3698085003465406, 0.7409220865300142, 3.8563844322818257]
+# start_params = [6.580533254781194, 3.9864664932129448, 5.449597771502351, -4.745542534551469, 5.417885816187267, -0.9763982929306676, -0.6393332327706205, 4.957431742422024, -1.915497716638312, -0.37482843423023354, 2.949800391142452, 1.4475260260768181, 3.604345246548975, 6.361848972489542, -1.1557665447149854, 3.0248972946038934, 6.15337842896789, 0.7682268194563333, 0.5362476060298172, 1.03528556158245, 1.8242592280989955, 1.4443173414788706, 5.318190141828198, 0.36336308193834066, 3.378481536831107, 0.7411694221366492, 3.860346459796649]
+start_params = [6.217795876608726, 3.513668819360447, 5.313741560664802, -4.754058351072777, 5.6516280873650375, -0.9879077711118306, -0.6701011192775708, 4.890490402445263, -1.8568957615331518, -0.5058713957494758, 2.949775462474194, 1.3968457010608986, 3.733213845197384, 6.3613729318369, -1.0384956233607354, 3.1804533262814223, 6.153388015758159, 0.7674739973169719, 0.3621044127233872, 1.0453662826880712, 1.8691243920979241, 1.5433262720227656, 5.318225098491821, 0.3555337172916772, 3.2008970296844974, 0.7419401981764484, 4.007599658311605]
+###############################
+
+
+# Generate step qc
+step_qc = generate_empty_circuit()
+ansact = generate_ansact()
+# append
+append!(step_qc, step_qc_exp)
+append!(step_qc, ansact)
+@assert length(getparameters(ansact)) == 27
+setparameters!(ansact, start_params)
+# Add measures
+addMeasuresOS(step_qc)
+
+
+# start_params = getRandParameters(ansact)
+# copy_start_params = start_params[:]
+# copy_xparams = xparams[:]
+# getCheckValue(xparams)
+
+
+#####################
+loss(params) = loss_expected_zero_state(execute(backend, step_qc, params))
+dloss(params) = real(loss'(params))
+#of = OptimizationFunction(false, (x) -> (loss(x), dloss(x)), loss)
+
+function call_N_qderivative(x, N)
+    y  = 0.0
+    dy = zeros(27)
+    for i in 1:N
+        tmp_y, tmp_dy = qderivative(qiskitBackendNoisySim, step_qc, loss_expected_zero_state, x)
+        #tmp_y, tmp_dy = qderivative(qiskitBackendSim, step_qc, loss_expected_zero_state, x)
+        y = y + tmp_y
+        #println(tmp_y)
+        dy = dy + tmp_dy
+    end
+    return y/N, dy/N
+end
+
+function call_N_loss_expected_zero_state(x, N)
+    y  = 0.0
+    for i in 1:N
+        #tmp_y = loss_expected_zero_state(execute(qiskitBackendNoisySim, setAndConvert(step_qc, x)))
+        tmp_y = qexecute(qiskitBackendNoisySim, step_qc, loss_expected_zero_state, x)
+        y = y + tmp_y
+        #println(tmp_y)
+    end
+    return y/N
+end
+
+# of = OptimizationFunction(
+#         false,
+#         (x) -> qderivative(qiskitBackendNoisySim, step_qc, loss_expected_zero_state, x),
+#         (x) -> loss_expected_zero_state(execute(qiskitBackendNoisySim, setAndConvert(step_qc, x))))
+
+
+
+# of = OptimizationFunction(
+#         false,
+#         (x) -> call_N_qderivative(x, 30),
+#         (x) -> call_N_loss_expected_zero_state(x, 30))
+
+of = OptimizationFunction(
+        false,
+        (x) -> qderivative(qiskitBackendJakarta, step_qc, loss_expected_zero_state, x),
+        (x) -> loss_expected_zero_state(execute(qiskitBackendJakarta, setAndConvert(step_qc, x))))
+
+
+#0.262
+getCheckValue(start_params)
+loss(start_params)
+
+val, xparams, itr = gradientDescent(of, start_params, α=0.01, maxItr=20,
+                              argsArePeriodic=true, isExpectedZero=true, ϵ=1e-8, debug=true, useBigValInc=true,
+                              checkFn=(p) -> (getCheckValue(p), loss(p), check_unitary_error(p)))
+
+getCheckValue(xparams)
+loss(xparams)
+
+######### Check ####
+tmp_ansact = generate_ansact()
+#setparameters!(tmp_ansact, xparams)
+setparameters!(tmp_ansact, start_params)
+# setparameters!(tmp_ansact, [5.320692270281138, 1.5566681473102066, 2.269201505047677, -0.1261225412262458, 2.0150358650867424, 2.729686675782021, 0.4638802228166154, 6.673713239833958, -0.1541477496339137, 3.8097689015915295, 5.114843440567334, -0.30088624472258135, 6.898575743994055, 3.7520726582511204, 3.3099380224134687, -0.8752477555686725, 0.42227594419238185, 4.676879012297018, 3.4247625124371788, 4.247000580142243, -1.3332959807568645, 6.686640040946416, 5.243228542119712, 1.851948456724964, -0.21425305617548282, 3.1166005079640993, 2.861285633256132])
+# setparameters!(tmp_ansact, getRandParameters(ansact))
+
+tmp_qc_full = generate_empty_circuit()
+append!(tmp_qc_full, inv(tmp_ansact))
+#append!(tmp_qc_full, step_qc_exp)
+append!(tmp_qc_full, check_qc)
+addMeasuresOS(tmp_qc_full)
+execute(backend, tmp_qc_full)
+
+
+
+##############################################################
+
+start_params =[6.357739083193767, 4.110466988994183, 4.566133708100635, -4.727581603064405, 6.207391247986331, -1.3477711816915519, -0.7698439582879397, 4.677177128084215, -1.88364164245155, -6.961405873009646, 2.3088656324648755, 1.9854073372986245, -2.4954433452385736, 6.326779366664302, -0.7789648567030898, 2.995616831369772, 6.237335880828537, 0.6943207146536418, 0.37027914593259564, 0.9373275950100715, 2.0325673904575456, 1.3926281522358193, 5.042496816647515, 0.3933698184667445, 3.4025273194720507, 0.9766806621264883, 3.8089690519454855]
+tmp_ansact = generate_ansact()
+setparameters!(tmp_ansact, start_params)
+
+tmp_qc_full = generate_empty_circuit()
+append!(tmp_qc_full, inv(tmp_ansact))
+#append!(tmp_qc_full, step_qc_exp)
+append!(tmp_qc_full, check_qc)
+evaluate_qc_step2 = prepare_tomography_qc(tmp_qc_full)
+
+
+#
+#evaluate(qc, sim)
+#evaluate(evaluate_qc_step2, sim_noisy_jakarta)
+#evaluate(qc, jakarta)
+
+jobs_step2 = evaluate_jobs(evaluate_qc_step2, sim_noisy_jakarta)
+#jobs_step2 = evaluate_jobs(evaluate_qc_step2, jakarta)
+# Job ID: 621e3b8e47f3733a9e3798ce
+# Job ID: 621e3b9347f3734fd83798cf
+# Job ID: 621e3b98a2eeaaebc9ad4220
+# Job ID: 621e3b9c47f37380da3798d0
+# Job ID: 621e3ba1f0b807a6dadb7f38
+# Job ID: 621e3ba5f0b807a071db7f39
+# Job ID: 621e3ba9a164870bafe70484
+# Job ID: 621e3baec799db1da3efd6e5
+jobsid_step2 = ["621e3b8e47f3733a9e3798ce", "621e3b9347f3734fd83798cf", "621e3b98a2eeaaebc9ad4220",
+                "621e3b9c47f37380da3798d0", "621e3ba1f0b807a6dadb7f38", "621e3ba5f0b807a071db7f39",
+                "621e3ba9a164870bafe70484", "621e3baec799db1da3efd6e5"]
+jobs_step2 = [jakarta.retrieve_job(id) for id in jobsid_step2]
+
+
+# Noisy sim: 0.452
+# Real hardware: 0.281, 0.0147
+results_step2 = evaluate_results(jobs_step2, evaluate_qc_step2)

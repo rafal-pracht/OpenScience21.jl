@@ -2,6 +2,7 @@ module Gates
 
 
 using QuantumCircuits
+using QuantumCircuits.QML
 # using QGen.Quantum
 # using QGen.Quantum.Gates
 # using QGen.Quantum.QBase
