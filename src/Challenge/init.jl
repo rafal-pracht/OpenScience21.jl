@@ -154,6 +154,13 @@ function check_simulation_err(qc, t)
     err(sym_full, exp_full)
 end
 
+function check_circuits_err(qc1, qc2)
+    sym1 = execute(backend, qc1)
+    sym2 = execute(backend, qc2)
+
+    err(sym1, sym2)
+end
+
 function create_full_circuit(qc_add, n)
     qr = QuantumRegister(7, "q")
     qc = QCircuit(qr)

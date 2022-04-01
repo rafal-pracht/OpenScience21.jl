@@ -142,14 +142,76 @@ addMeasuresOS(tmp_qc_full)
 execute(backend, tmp_qc_full)
 
 ##############################################################
+using QuantumCircuits.QCircuits.Gates: CX
+using QuantumCircuits.Execute: generate_mesuere_circuits, extractProbability, correctMeasures
+
+function generate_3cx_circuit(qc)
+    newQC = generate_empty_circuit()
+    for c in getCode(qc)
+        if typeof(c) == CX
+            add!(newQC, c)
+            newQC.barrier()
+            add!(newQC, c)
+            newQC.barrier()
+            add!(newQC, c)
+        else
+            add!(newQC, c)
+        end
+    end
+
+    return newQC
+end
+
+function createCorrMatrix(jobs, shots=8192)
+    job_results = jobs.result().get_counts()
+    results = Vector{Float64}[]
+    for res in job_results
+        push!(results, extractProbability(res, 3, shots))
+    end
+    corrMes = hcat(results...)
+    correctMeas = inv(corrMes)
+
+    return correctMeas
+end
+
+function extractProbability2(counts::Dict, qubits::Integer, shots::Integer)
+    p = zeros(2^qubits)
+
+    for (k, n) in counts
+        k = k[3:end]
+        p[parse(Int, k; base=16) + 1] = n/shots
+    end
+
+    return p
+end
+
+
+##############################################################
 start_params = [1.103633523141456, 0.5621723387373332, 3.535362761806341, 3.1465964893594798, 0.2416797028860025, 3.7901137174699655, 2.515512466095495, 6.762078821484598, 5.187907546418758, -0.19860568802167688, 5.997524383569426, 5.905306784345511, 6.0845429036054846, 3.1437960954072843, 4.530029341809641, 1.2337272277202151, 2.221508726842684, 1.6606762213540665, 4.12874467494519, 4.827888262840575, 5.603301739361324, 5.894694449973559, 1.4978959576376278, 6.261167575543967, 2.7695944642836734, 1.8088920099024433, 1.9134833740486716]
 tmp_ansact = generate_ansact()
 setparameters!(tmp_ansact, start_params)
 
 tmp_qc_full = generate_empty_circuit()
 append!(tmp_qc_full, inv(tmp_ansact))
-evaluate_qc_step5 = prepare_tomography_qc(tmp_qc_full)
+tmp_qc_full_3cx = generate_3cx_circuit(tmp_qc_full)
 
+evaluate_qc_step5 = prepare_tomography_qc(tmp_qc_full)
+evaluate_qc_step5_3cx = prepare_tomography_qc(tmp_qc_full_3cx)
+
+
+### Measurment correct
+addMeasuresOS(tmp_qc_full)
+measure_Corr = generate_mesuere_circuits(tmp_qc_full)
+measure_Corr_qiskit = [c.qc for c in measure_Corr]
+jobs_meas_corr = qiskit.execute(measure_Corr_qiskit, sim_noisy_jakarta, shots=8192)
+# jobs_meas_corr = qiskit.execute(measure_Corr_qiskit, jakarta, shots=8192)
+# 62420af774de0e045a85c61e
+corrMatrix = createCorrMatrix(jobs_meas_corr)
+
+
+
+
+#jobs_step5 = evaluate_jobs(evaluate_qc_step5, sim)
 jobs_step5 = evaluate_jobs(evaluate_qc_step5, sim_noisy_jakarta)
 #jobs_step5 = evaluate_jobs(evaluate_qc_step5, jakarta)
 # Job ID: 6220f14f4668ab66ef8da277
@@ -176,15 +238,146 @@ jobsid_step5 = ["6230d605d73e0a4b4a31ff7c", "6230d609d10f746d4467ae33", "6230d60
                 "6230d610d10f74540667ae34", "6230d6122001bb71d86e9827", "6230d6150d6e0d97d1138696",
                 "6230d618314f79a95e20c20d", "6230d61b0d6e0d4cd6138697"]
 
+# Job ID: 6241f5b9538eba52a2612b25
+# Job ID: 6241f5bd19e6892391c824b8
+# Job ID: 6241f5bf0af65deeded94a9b
+# Job ID: 6241f5c209995cbf5f49404e
+# Job ID: 6241f5c5d97bff1176695e1a
+# Job ID: 6241f5c8d97bffc5e0695e1b
+# Job ID: 6241f5caa2f72d4347dacc1d
+# Job ID: 6241f5cc537fccd4149eb94a
+
 
 jobs_step5 = [jakarta.retrieve_job(id) for id in jobsid_step5]
 
-# Noisy sim: 0.797, 0.826
+
+jobs_step5_3cx = evaluate_jobs(evaluate_qc_step5_3cx, sim_noisy_jakarta)
+# jobs_step5_3cx = evaluate_jobs(evaluate_qc_step5_3cx, jakarta)
+# Job ID: 6241f54e19e689dcb0c824b2
+# Job ID: 6241f553537fcced289eb942
+# Job ID: 6241f55609995c6fc4494046
+# Job ID: 6241f55819e689a092c824b3
+# Job ID: 6241f55b8293e96dfd1e7493
+# Job ID: 6241f55e537fcc03189eb944
+# Job ID: 6241f561a2f72d4c77dacc19
+# Job ID: 6241f5640af65dc784d94a94
+
+
+
+# Noisy sim: 0.797, 0.826, 0.813
 # Real hardware:  0.783, 0.00448
 # Real hardware2: 0.7975091601169371, 0.011794318866976355
-results_step5 = evaluate_results(jobs_step5, evaluate_qc_step5)
 
+
+results_step5 = evaluate_results(jobs_step5, evaluate_qc_step5)
+results_step5_3cx = evaluate_results(jobs_step5_3cx, evaluate_qc_step5_3cx)
+
+
+
+
+
+
+corrMatrix
+
+# Best 0.933
 
 # Slack
 # Noisy sim   : ~0.832
 # Real device : ~0.765
+
+
+
+
+jobs_step5 = evaluate_jobs(evaluate_qc_step5, sim_noisy_jakarta)
+results_step5 = evaluate_results(jobs_step5, evaluate_qc_step5)
+
+
+
+# correct measurment
+int(x) = floor(Int, x)
+for j in jobs_step5#jobs_step5_3cx
+    for res in j.result().results
+
+        counts = res.data.counts
+        p = extractProbability2(counts, 3, res.shots)
+        #shots = 1000_000_000
+        shots = 8192
+        cp = int.(round.(shots .* correctMeasures(corrMatrix, p)))
+
+        #@show cp, sum(cp)
+        new_counts = Dict()
+        for (i, v) in enumerate(cp)
+            push!(new_counts, string("0x", (i-1)) => v )
+        end
+        # @show counts
+        # @show new_counts
+        res.shots = shots
+        res.data.counts = new_counts
+    end
+end
+
+
+
+# 0.7848
+# zero nois - no correct meaurment
+for (j, j3cx) in zip(jobs_step5, jobs_step5_3cx)
+    #println("Job")
+    for (res, res3cx) in zip(j.result().results, j3cx.result().results)
+        #@show res.shots, res3cx.shots
+        res.shots = 2 * res.shots
+
+        counts = res.data.counts
+        counts_3cx = res3cx.data.counts
+
+        new_counts = Dict()
+        for k in keys(counts)
+            push!(new_counts, k => 3*counts[k] - counts_3cx[k])
+        end
+        #@show new_counts
+        res.data.counts = new_counts
+        #@show sum([n for (k, n) in res.data.counts])
+    end
+end
+
+
+# zero nois - no correct meaurment
+for (j, j3cx) in zip(jobs_step5, jobs_step5_3cx)
+    #println("Job")
+    for (res, res3cx) in zip(j.result().results, j3cx.result().results)
+        # @show res.shots, res3cx.shots
+        #res.shots = 2 * res.shots
+
+        counts = res.data.counts
+        counts_3cx = res3cx.data.counts
+        # @show counts
+        # @show counts_3cx
+
+        p = extractProbability2(counts, 3, res.shots)
+        p_3cx = extractProbability2(counts_3cx, 3, res3cx.shots)
+
+        cp = correctMeasures(corrMatrix, p)
+        cp_3cx = correctMeasures(corrMatrix, p_3cx)
+
+        #@show cp
+        #@show cp_3cx
+        new_p = (3/2) * cp - (1/2) * cp_3cx
+        new_p = min.(max.(new_p, 0.0), 1.0)
+        new_p = new_p / sum(new_p)
+        #@show new_p 8192
+        cp = int.(round.(1000_000 .* new_p))
+
+
+        new_counts = Dict()
+        shots = 0
+        for (i, v) in enumerate(cp)
+            push!(new_counts, string("0x", (i-1)) => v )
+            shots += v
+        end
+
+        # @show res.data.counts
+        # @show new_counts
+        # @show shots
+        res.data.counts = new_counts
+        res.shots = shots
+    end
+end
