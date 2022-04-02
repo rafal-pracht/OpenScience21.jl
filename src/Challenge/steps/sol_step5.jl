@@ -206,6 +206,7 @@ measure_Corr_qiskit = [c.qc for c in measure_Corr]
 jobs_meas_corr = qiskit.execute(measure_Corr_qiskit, sim_noisy_jakarta, shots=8192)
 # jobs_meas_corr = qiskit.execute(measure_Corr_qiskit, jakarta, shots=8192)
 # 62420af774de0e045a85c61e
+jobs_meas_corr = jakarta.retrieve_job("62420af774de0e045a85c61e")
 corrMatrix = createCorrMatrix(jobs_meas_corr)
 
 
@@ -246,6 +247,9 @@ jobsid_step5 = ["6230d605d73e0a4b4a31ff7c", "6230d609d10f746d4467ae33", "6230d60
 # Job ID: 6241f5c8d97bffc5e0695e1b
 # Job ID: 6241f5caa2f72d4347dacc1d
 # Job ID: 6241f5cc537fccd4149eb94a
+# jobsid_step5 = ["6241f5b9538eba52a2612b25", "6241f5bd19e6892391c824b8", "6241f5bf0af65deeded94a9b",
+#                 "6241f5c209995cbf5f49404e", "6241f5c5d97bff1176695e1a", "6241f5c8d97bffc5e0695e1b",
+#                 "6241f5caa2f72d4347dacc1d", "6241f5cc537fccd4149eb94a"]
 
 
 jobs_step5 = [jakarta.retrieve_job(id) for id in jobsid_step5]
@@ -261,20 +265,20 @@ jobs_step5_3cx = evaluate_jobs(evaluate_qc_step5_3cx, sim_noisy_jakarta)
 # Job ID: 6241f55e537fcc03189eb944
 # Job ID: 6241f561a2f72d4c77dacc19
 # Job ID: 6241f5640af65dc784d94a94
+jobsid_step5_3cx = ["6241f54e19e689dcb0c824b2", "6241f553537fcced289eb942", "6241f55609995c6fc4494046",
+                    "6241f55819e689a092c824b3", "6241f55b8293e96dfd1e7493", "6241f55e537fcc03189eb944",
+                    "6241f561a2f72d4c77dacc19", "6241f5640af65dc784d94a94"]
 
-
+jobs_step5_3cx = [jakarta.retrieve_job(id) for id in jobsid_step5_3cx]
 
 # Noisy sim: 0.797, 0.826, 0.813
 # Real hardware:  0.783, 0.00448
 # Real hardware2: 0.7975091601169371, 0.011794318866976355
-
+# Real hardware2(correct Measurment): 0.9007803702040126, 0.013158676196664233
+# Real hardware2(correct Measurment, zero noise): 0.9241462156154776, 0.00347800242121078
 
 results_step5 = evaluate_results(jobs_step5, evaluate_qc_step5)
 results_step5_3cx = evaluate_results(jobs_step5_3cx, evaluate_qc_step5_3cx)
-
-
-
-
 
 
 corrMatrix
@@ -340,7 +344,7 @@ for (j, j3cx) in zip(jobs_step5, jobs_step5_3cx)
 end
 
 
-# zero nois - no correct meaurment
+# zero nois - correct meaurment
 for (j, j3cx) in zip(jobs_step5, jobs_step5_3cx)
     #println("Job")
     for (res, res3cx) in zip(j.result().results, j3cx.result().results)
