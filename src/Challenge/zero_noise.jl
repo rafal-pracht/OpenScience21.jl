@@ -1,18 +1,3 @@
-# Hi everyone!
-# I hope your projects are going well, and you're having a fun time of it! :)
-# I have a quick clarification for those planning to do some kind of
-# zero-noise extrapolation. Be sure to not directly extrapolate the state
-# tomography fidelity to zero noise. Extrapolating other expectation values
-# that then inform data going into the state tomography calculation is just fine though.
-#
-# Stefan H. Sack  15 days ago
-# If we mitigate the data that goes into the StateTomographyFitter,
-# how can we get it to be the correct data type? The function only takes
-# Result() objects and not just a counts dictionary.
-#
-# AJ Rasmusson  12 days ago
-# There are a couple options, but they depend on the details of your solution.
-# Let's chat in a DM
 backend_sim_jakarta = QiskitQuantum(sim_noisy_jakarta)
 
 using QuantumCircuits.QCircuits.Gates: CX
