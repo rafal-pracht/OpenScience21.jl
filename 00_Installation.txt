@@ -1,0 +1,20 @@
+# Downlad julia, 
+https://julialang.org/downloads/
+
+# Install qiskit and qiskit.ignis
+conda create -n opensc python=3.8
+conda activate opensc
+pip install qiskit qiskit.ignis
+
+# Run julia from project dictionary, and then in julia console
+Pkg.activate(".")
+Pkg.instantiate()
+# Check if all works fine
+using QuantumCircuits
+Pkg.test("OpenScience21")
+# exit Julia console
+exit()
+
+# run jupyter from project dictionary
+jupyter-notebook
+
