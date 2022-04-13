@@ -4,7 +4,7 @@ https://julialang.org/downloads/
 # Install qiskit and qiskit.ignis
 conda create -n opensc python=3.8
 conda activate opensc
-pip install qiskit qiskit.ignis
+pip install qiskit qiskit.ignis matplotlib
 
 # Run julia from project dictionary, and then in julia console
 # Note: that when you run julia the correct python environemnt should be activated.
