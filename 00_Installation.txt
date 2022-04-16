@@ -19,6 +19,13 @@ exit()
 # Note: that when you run julia the correct python environemnt should be activated.
 Pkg.activate(".")
 Pkg.instantiate()
+
+# if during command Pkg.instantiate() will be an error "ERROR: `IJulia` is a direct dependency, but does not appear in the manifest. If you intend `IJulia` to be a direct dependency, run `Pkg.resolve()` to populate the manifest. Otherwise, remove `IJulia` with `Pkg.rm("IJulia")`. Finally, run `Pkg.instantiate()` again.'
+# then execute
+Pkg.resolve()
+Pkg.instantiate()
+# end if
+
 # Check if all works fine
 using QuantumCircuits
 Pkg.test("OpenScience21")
